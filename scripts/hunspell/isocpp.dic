@@ -52,6 +52,7 @@ ASIC
 asio
 AST
 async
+AUTOSAR
 'B'
 b2
 BDE
@@ -96,6 +97,7 @@ completers
 componentization
 composability
 composable
+ComputationCache
 conceptsTS
 cond
 const
@@ -212,6 +214,7 @@ GitHub
 GOTW
 gp
 GPLv3
+grep
 gsl
 GSL
 GSL's
@@ -240,6 +243,7 @@ impactful
 impl
 Impl
 implicitpointercast
+incform
 incomplet
 incorrekt
 increment1
@@ -269,6 +273,7 @@ Jiangang
 jmp
 join's
 JSF
+jthread
 Juhl
 knr
 Koenig97
@@ -301,9 +306,11 @@ md
 memberinit
 members'
 memcmp
+memcpy
 memmove
 memoization
 memoized
+memoizes
 memset
 metameta
 metaprogram
@@ -317,6 +324,7 @@ Meyers96
 Meyers97
 microbenchmarks
 middleware
+MISRA
 mixin
 mixins
 mnemonizes
@@ -335,6 +343,7 @@ MyMap
 myset
 myX
 n'
+naïvely
 namespace
 namespaces
 Namespaces
@@ -460,6 +469,7 @@ retryable
 *Re-usability
 reusability
 Reusability
+rf
 Ri
 Rl
 rnd
@@ -469,6 +479,7 @@ Rouquette
 Rp
 Rper
 Rr
+rr
 RRconc
 Rsl
 Rstr
@@ -563,6 +574,7 @@ tmp
 TMP
 tock
 TODO
+toLower
 toolchains
 TotallyOrdered
 TP
@@ -576,6 +588,7 @@ typesafe
 UB
 u1
 u2
+UDLs
 unaliased
 uncompromised
 underuse
@@ -593,6 +606,7 @@ UTF
 util
 v's
 v1
+v17
 v2
 va
 ValueType
@@ -612,7 +626,9 @@ virtuality
 virtuals
 VLAs
 volatile2
+vptr
 vr
+vtable
 vtbls
 vv
 w0
@@ -621,6 +637,7 @@ webby
 Webcolor
 webcolors
 WG21
+WorkQueue
 'widen'
 x1
 x2
