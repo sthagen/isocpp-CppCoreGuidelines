@@ -2389,6 +2389,7 @@ Other function rules:
 * [F.53: Avoid capturing by reference in lambdas that will be used non-locally, including returned, stored on the heap, or passed to another thread](#Rf-value-capture)
 * [F.54: If you capture `this`, capture all variables explicitly (no default capture)](#Rf-this-capture)
 * [F.55: Don't use `va_arg` arguments](#F-varargs)
+* [F.56: Avoid unnecessary condition nesting](#F-nesting)
 
 Functions have strong similarities to lambdas and function objects.
 
@@ -4034,6 +4035,73 @@ Declaring a `...` parameter is sometimes useful for techniques that don't involv
 * Issue a diagnostic for using `va_list`, `va_start`, or `va_arg`.
 * Issue a diagnostic for passing an argument to a vararg parameter of a function that does not offer an overload for a more specific type in the position of the vararg. To fix: Use a different function, or `[[suppress(types)]]`.
 
+
+### <a name="F-nesting"></a>F.56: Avoid unnecessary condition nesting
+
+##### Reason
+
+Shallow nesting of conditions makes the code easier to follow. It also makes the intent clearer.
+Strive to place the essential code at outermost scope, unless this obscures intent.
+
+##### Example
+
+Use a guard-clause to take care of exceptional cases and return early.
+
+    // Bad: Deep nesting
+    void foo() {
+        ...
+        if (x) {
+            computeImportantThings(x);
+        }
+    }
+
+    // Bad: Still a redundant else.
+    void foo() {
+        ...
+        if (!x) {
+            return;
+        }
+        else {
+            computeImportantThings(x);
+        }
+    }
+
+    // Good: Early return, no redundant else
+    void foo() {
+        ...
+        if (!x)
+            return;
+
+        computeImportantThings(x);
+    }
+
+##### Example
+
+    // Bad: Unnecessary nesting of conditions
+    void foo() {
+        ...
+        if(x) {
+            if (y) {
+                computeImportantThings(x);
+            }
+        }
+    }
+
+    // Good: Merge conditions + return early
+    void foo() {
+        ...
+        if (!(x && y))
+            return;
+
+        computeImportantThings(x);
+    }
+
+##### Enforcement
+
+Flag a redundant `else`.
+Flag a functions whose body is simply a conditional statement enclosing a block.
+
+
 # <a name="S-class"></a>C: Classes and class hierarchies
 
 A class is a user-defined type, for which a programmer can define the representation, operations, and interfaces.
@@ -4420,6 +4488,7 @@ Concrete type rule summary:
 
 * [C.10: Prefer concrete types over class hierarchies](#Rc-concrete)
 * [C.11: Make concrete types regular](#Rc-regular)
+* [C.12: Don't make data members `const` or references](#Rc-constref)
 
 ### <a name="Rc-concrete"></a>C.10: Prefer concrete types over class hierarchies
 
@@ -4508,6 +4577,27 @@ Often, such types are referred to as "move-only types".
 ##### Enforcement
 
 ???
+
+
+### <a name="Rc-constref"></a>C.12: Don't make data members `const` or references
+
+##### Reason
+
+They are not useful, and make types difficult to use by making them either uncopyable or partially uncopyable for subtle reasons.
+
+##### Example; bad
+
+    class bad {
+        const int i;    // bad
+        string& s;      // bad
+        // ...
+    };
+
+##### Enforcement
+
+Flag a data member that is `const`, `&`, or `&&`.
+
+
 
 ## <a name="S-ctor"></a>C.ctor: Constructors, assignments, and destructors
 
@@ -6032,7 +6122,7 @@ Consider:
 
 (Simple) Assignment operators should not contain the pattern `if (this == &a) return *this;` ???
 
-### <a name="Rc-move-assignment"></a>C.63: Make move assignment non-`virtual`, take the parameter by `&&`, and return by non-`const &`
+### <a name="Rc-move-assignment"></a>C.63: Make move assignment non-`virtual`, take the parameter by `&&`, and return by non-`const&`
 
 ##### Reason
 
@@ -6562,11 +6652,11 @@ Of course there are ways of making `==` work in a hierarchy, but the naive appro
 
 ##### Note
 
-This rule applies to all the usual comparison operators: `!=`, `<`, `<=`, `>`, and `>=`.
+This rule applies to all the usual comparison operators: `!=`, `<`, `<=`, `>`, `>=`, and `<=>`.
 
 ##### Enforcement
 
-* Flag a virtual `operator==()`; same for other comparison operators: `!=`, `<`, `<=`, `>`, and `>=`.
+* Flag a virtual `operator==()`; same for other comparison operators: `!=`, `<`, `<=`, `>`, `>=`, and `<=>`.
 
 ### <a name="Rc-hash"></a>C.89: Make a `hash` `noexcept`
 
@@ -8344,9 +8434,9 @@ By itself, `cout_my_class` would be OK, but it is not usable/composable with cod
 
 ##### Note
 
-There are strong and vigorous conventions for the meaning most operators, such as
+There are strong and vigorous conventions for the meaning of most operators, such as
 
-* comparisons (`==`, `!=`, `<`, `<=`, `>`, and `>=`),
+* comparisons (`==`, `!=`, `<`, `<=`, `>`, `>=`, and `<=>`),
 * arithmetic operations (`+`, `-`, `*`, `/`, and `%`)
 * access operations (`.`, `->`, unary `*`, and `[]`)
 * assignment (`=`)
@@ -11589,7 +11679,7 @@ A key example is basic narrowing:
 
 ##### Note
 
-The guidelines support library offers a `narrow_cast` operation for specifying that narrowing is acceptable and a `narrow` ("narrow if") that throws an exception if a narrowing would throw away information:
+The guidelines support library offers a `narrow_cast` operation for specifying that narrowing is acceptable and a `narrow` ("narrow if") that throws an exception if a narrowing would throw away legal values:
 
     i = narrow_cast<int>(d);   // OK (you asked for it): narrowing: i becomes 7
     i = narrow<int>(d);        // OK: throws narrowing_error
@@ -19414,6 +19504,22 @@ It is almost always a bug to mention an unnamed namespace in a header file.
 Nothing external can depend on an entity in a nested unnamed namespace.
 Consider putting every definition in an implementation source file in an unnamed namespace unless that is defining an "external/exported" entity.
 
+##### Example; bad
+
+    static int f();
+    int g();
+    static bool h();
+    int k();
+
+##### Example; good
+
+    namespace {
+        int f();
+        bool h();
+    }
+    int g();
+    int k();
+
 ##### Example
 
 An API class and its members can't live in an unnamed namespace; but any "helper" class or function that is defined in an implementation source file should be at an unnamed namespace scope.
@@ -21005,7 +21111,7 @@ for example, `Expects(p)` will become `[[expects: p]]`.
 
 * `finally`        // `finally(f)` makes a `final_action{f}` with a destructor that invokes `f`
 * `narrow_cast`    // `narrow_cast<T>(x)` is `static_cast<T>(x)`
-* `narrow`         // `narrow<T>(x)` is `static_cast<T>(x)` if `static_cast<T>(x) == x` or it throws `narrowing_error`
+* `narrow`         // `narrow<T>(x)` is `static_cast<T>(x)` if `static_cast<T>(x) == x` with no signedness promotions, or it throws `narrowing_error` (e.g., `narrow<unsigned>(-42)` throws)
 * `[[implicit]]`   // "Marker" to put on single-argument constructors to explicitly make them non-explicit.
 * `move_owner`     // `p = move_owner(q)` means `p = q` but ???
 * `joining_thread` // a RAII style version of `std::thread` that joins.
