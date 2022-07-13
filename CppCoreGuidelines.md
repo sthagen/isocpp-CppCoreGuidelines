@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ Core Guidelines
 
-June 13, 2022
+July 13, 2022
 
 
 Editors:
@@ -2432,7 +2432,6 @@ Naming that lambda breaks up the expression into its logical parts and provides 
     auto lessT = [](T x, T y) { return x.rank() < y.rank() && x.value() < y.value(); };
 
     sort(a, b, lessT);
-    find_if(a, b, lessT);
 
 The shortest code is not always the best for performance or maintainability.
 
@@ -4993,12 +4992,18 @@ There is a lot of code that is non-specific about ownership.
 
 ##### Example
 
-    ???
+    class legacy_class
+    {
+        foo* m_owning;   // Bad: change to unique_ptr<T> or owner<T*>
+        bar* m_observer; // OK: keep
+    }
+
+The only way to determine ownership may be code analysis.
 
 ##### Note
 
-If the `T*` or `T&` is owning, mark it `owning`. If the `T*` is not owning, consider marking it `ptr`.
-This will aid documentation and analysis.
+Ownership should be clear in new code (and refactored legacy code) according to [R.20](#Rr-owner) for owning
+pointers and [R.3](#Rr-ptr) for non-owning pointers.  References should never own [R.4](#Rr-ref).
 
 ##### Enforcement
 
@@ -16216,14 +16221,14 @@ Better:
 
 ##### Reason
 
-`finally` is less verbose and harder to get wrong than `try`/`catch`.
+`finally` from the [GSL](#S-gsl) is less verbose and harder to get wrong than `try`/`catch`.
 
 ##### Example
 
     void f(int n)
     {
         void* p = malloc(n);
-        auto _ = finally([p] { free(p); });
+        auto _ = gsl::finally([p] { free(p); });
         // ...
     }
 
