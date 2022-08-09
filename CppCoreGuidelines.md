@@ -2954,6 +2954,18 @@ This makes it clear to callers that the object is assumed to be modified.
 
 ##### Note
 
+Some user-defined and standard library types, such as `span<T>` or the iterators
+are [cheap to copy](#Rf-in) and may be passed by value, while doing so has
+mutable (in-out) reference semantics:
+
+    void increment_all(span<int> a)
+    {
+      for (auto&& e : a)
+        ++e;
+    }
+
+##### Note
+
 A `T&` argument can pass information into a function as well as out of it.
 Thus `T&` could be an in-out-parameter. That can in itself be a problem and a source of errors:
 
@@ -6641,6 +6653,7 @@ It is really hard to write a foolproof and useful `==` for a hierarchy.
     class B {
         string name;
         int number;
+    public:
         virtual bool operator==(const B& a) const
         {
              return name == a.name && number == a.number;
@@ -6650,11 +6663,12 @@ It is really hard to write a foolproof and useful `==` for a hierarchy.
 
 `B`'s comparison accepts conversions for its second operand, but not its first.
 
-    class D : B {
+    class D : public B {
         char character;
+    public:
         virtual bool operator==(const D& a) const
         {
-            return name == a.name && number == a.number && character == a.character;
+            return B::operator==(a) && character == a.character;
         }
         // ...
     };
@@ -6662,7 +6676,7 @@ It is really hard to write a foolproof and useful `==` for a hierarchy.
     B b = ...
     D d = ...
     b == d;    // compares name and number, ignores d's character
-    d == b;    // error: no == defined
+    d == b;    // compares name and number, ignores d's character
     D d2;
     d == d2;   // compares name, number, and character
     B& b2 = d2;
@@ -8501,23 +8515,21 @@ Avoiding inconsistent definition in different namespaces
 ##### Example
 
     struct S { };
-    bool operator==(S, S);   // OK: in the same namespace as S, and even next to S
+    S operator+(S, S);   // OK: in the same namespace as S, and even next to S
     S s;
 
-    bool x = (s == s);
-
-This is what a default `==` would do, if we had such defaults.
+    S r = s + s;
 
 ##### Example
 
     namespace N {
         struct S { };
-        bool operator==(S, S);   // OK: in the same namespace as S, and even next to S
+        S operator+(S, S);   // OK: in the same namespace as S, and even next to S
     }
 
     N::S s;
 
-    bool x = (s == s);  // finds N::operator==() by ADL
+    S r = s + s;  // finds N::operator+() by ADL
 
 ##### Example, bad
 
@@ -16093,7 +16105,7 @@ Catch by value can be appropriate for a small value type such as an `enum` value
 
 ##### Note
 
-To rethrow a caught exception use `throw;` not `throw e;`. Using `throw e;` would throw a new copy of `e` (sliced to the static type `std::exception`) instead of rethrowing the original exception of type `std::runtime_error`. (But keep [Don't try to catch every exception in every function](#Re-not-always) and [Minimize the use of explicit `try`/`catch`](#Re-catch) in mind.)
+To rethrow a caught exception use `throw;` not `throw e;`. Using `throw e;` would throw a new copy of `e` (sliced to the static type `std::exception`, when the exception is caught by `catch (const std::exception& e)`) instead of rethrowing the original exception of type `std::runtime_error`. (But keep [Don't try to catch every exception in every function](#Re-not-always) and [Minimize the use of explicit `try`/`catch`](#Re-catch) in mind.)
 
 ##### Enforcement
 
@@ -18248,7 +18260,7 @@ This is a simplified version of `std::copy` (ignoring the possibility of non-con
     template<class Iter>
     Out copy(Iter first, Iter last, Iter out)
     {
-        return copy_helper(first, last, out, typename copy_trait<Iter>::tag{})
+        return copy_helper(first, last, out, typename copy_trait<Value_type<Iter>>::tag{})
     }
 
     void use(vector<int>& vi, vector<int>& vi2, vector<string>& vs, vector<string>& vs2)
@@ -18264,7 +18276,7 @@ This is a general and powerful technique for compile-time algorithm selection.
 When `concept`s become widely available such alternatives can be distinguished directly:
 
     template<class Iter>
-        requires Pod<Value_type<iter>>
+        requires Pod<Value_type<Iter>>
     Out copy_helper(In, first, In last, Out out)
     {
         // use memmove
@@ -19263,7 +19275,7 @@ The errors will not be caught until link time for a program calling `bar` or `fo
     int foobar(int);
 
     // foo.cpp:
-    #include <foo.h>
+    #include "foo.h"
 
     void foo(int) { /* ... */ }
     int bar(double) { /* ... */ }
