@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ Core Guidelines
 
-July 13, 2022
+September 23, 2022
 
 
 Editors:
@@ -2346,6 +2346,8 @@ Function definition rules:
 * [F.7: For general use, take `T*` or `T&` arguments rather than smart pointers](#Rf-smart)
 * [F.8: Prefer pure functions](#Rf-pure)
 * [F.9: Unused parameters should be unnamed](#Rf-unused)
+* [F.10: If an operation can be reused, give it a name](#Rf-name)
+* [F.11: Use an unnamed lambda if you need a simple function object in one place only](#Rf-lambda)
 
 Parameter passing expression rules:
 
@@ -2866,6 +2868,91 @@ For example:
 
 Flag named unused parameters.
 
+### <a name="Rf-name"></a>F.10: If an operation can be reused, give it a name
+
+##### Reason
+
+Documentation, readability, opportunity for reuse.
+
+##### Example
+
+    struct Rec {
+        string name;
+        string addr;
+        int id;         // unique identifier
+    };
+
+    bool same(const Rec& a, const Rec& b)
+    {
+        return a.id == b.id;
+    }
+
+    vector<Rec*> find_id(const string& name);    // find all records for "name"
+
+    auto x = find_if(vr.begin(), vr.end(),
+        [&](Rec& r) {
+            if (r.name.size() != n.size()) return false; // name to compare to is in n
+            for (int i = 0; i < r.name.size(); ++i)
+                if (tolower(r.name[i]) != tolower(n[i])) return false;
+            return true;
+        }
+    );
+
+There is a useful function lurking here (case insensitive string comparison), as there often is when lambda arguments get large.
+
+    bool compare_insensitive(const string& a, const string& b)
+    {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); ++i) if (tolower(a[i]) != tolower(b[i])) return false;
+        return true;
+    }
+
+    auto x = find_if(vr.begin(), vr.end(),
+        [&](Rec& r) { compare_insensitive(r.name, n); }
+    );
+
+Or maybe (if you prefer to avoid the implicit name binding to n):
+
+    auto cmp_to_n = [&n](const string& a) { return compare_insensitive(a, n); };
+
+    auto x = find_if(vr.begin(), vr.end(),
+        [](const Rec& r) { return cmp_to_n(r.name); }
+    );
+
+##### Note
+
+whether functions, lambdas, or operators.
+
+##### Exception
+
+* Lambdas logically used only locally, such as an argument to `for_each` and similar control flow algorithms.
+* Lambdas as [initializers](#???)
+
+##### Enforcement
+
+* (hard) flag similar lambdas
+* ???
+
+### <a name="Rf-lambda"></a>F.11: Use an unnamed lambda if you need a simple function object in one place only
+
+##### Reason
+
+That makes the code concise and gives better locality than alternatives.
+
+##### Example
+
+    auto earlyUsersEnd = std::remove_if(users.begin(), users.end(),
+                                        [](const User &a) { return a.id > 100; });
+
+
+##### Exception
+
+Naming a lambda can be useful for clarity even if it is used only once.
+
+##### Enforcement
+
+* Look for identical and near identical lambdas (to be replaced with named functions or named lambdas).
+
 ## <a name="SS-call"></a>F.call: Parameter passing
 
 There are a variety of ways to pass parameters to a function and to return values.
@@ -3155,7 +3242,7 @@ Prefer using a named struct where there are semantics to the returned value. Oth
     tuple<int, string> f(const string& input)
     {
         // ...
-        return make_tuple(status, something());
+        return {status, something()};
     }
 
 C++98's standard library already used this style, because a `pair` is like a two-element `tuple`.
@@ -3203,7 +3290,7 @@ To compare, if we passed out all values as return values, we would something lik
     {
         string s;
         is >> s;
-        return {is, s};
+        return {is, move(s)};
     }
 
     for (auto p = get_string(cin); p.first; ) {
@@ -3235,6 +3322,29 @@ For example:
 The overly-generic `pair` and `tuple` should be used only when the value returned represents independent entities rather than an abstraction.
 
 Another example, use a specific type along the lines of `variant<T, error_code>`, rather than using the generic `tuple`.
+
+##### Note
+
+When the tuple to be returned is initialized from local variables that are expensive to copy,
+explicit `move` may be helpful to avoid copying:
+
+    pair<LargeObject, LargeObject> f(const string& input)
+    {
+        LargeObject large1 = g(input);
+        LargeObject large2 = h(input);
+        // ...
+        return { move(large1), move(large2) }; // no copies
+    }
+
+Alternatively, 
+
+    pair<LargeObject, LargeObject> f(const string& input)
+    {
+        // ...
+        return { g(input), h(input) }; // no copies, no moves
+    }
+
+Note this is different from the `return move(...)` anti-pattern from [ES.56](#Res-move)
 
 ##### Enforcement
 
@@ -4288,7 +4398,7 @@ This rule becomes even better if C++ gets ["uniform function call"](http://www.o
 The language requires `virtual` functions to be members, and not all `virtual` functions directly access data.
 In particular, members of an abstract class rarely do.
 
-Note [multi-methods](https://parasol.tamu.edu/~yuriys/papers/OMM10.pdf).
+Note [multi-methods](https://web.archive.org/web/20200605021759/https://parasol.tamu.edu/~yuriys/papers/OMM10.pdf).
 
 ##### Exception
 
@@ -5469,9 +5579,9 @@ However, most realistic `Date` classes have a "first date" (e.g. January 1, 1970
         Date() = default; // [See also](#Rc-default)
         // ...
     private:
-        int dd = 1;
-        int mm = 1;
-        int yyyy = 1970;
+        int dd {1};
+        int mm {1};
+        int yyyy {1970};
         // ...
     };
 
@@ -5591,9 +5701,9 @@ For example, `Vector0<int> v[100]` costs 100 allocations.
         Vector1(int n) :elem{new T[n]}, space{elem + n}, last{elem} {}
         // ...
     private:
-        own<T*> elem = nullptr;
-        T* space = nullptr;
-        T* last = nullptr;
+        own<T*> elem {};
+        T* space {};
+        T* last {};
     };
 
 Using `{nullptr, nullptr, nullptr}` makes `Vector1{}` cheap, but a special case and implies run-time checks.
@@ -5622,8 +5732,8 @@ Using in-class member initializers lets the compiler generate the function for y
 ##### Example
 
     class X2 {
-        string s = "default";
-        int i = 1;
+        string s {"default"};
+        int i {1};
     public:
         // use compiler-generated default constructor
         // ...
@@ -6950,6 +7060,8 @@ Function objects should be cheap to copy (and therefore [passed by value](#Rf-in
 
 Summary:
 
+* [F.10: If an operation can be reused, give it a name](#Rf-name)
+* [F.11: Use an unnamed lambda if you need a simple function object in one place only](#Rf-lambda)
 * [F.50: Use a lambda when a function won't do (to capture local variables, or to write a local function)](#Rf-capture-vs-overload)
 * [F.52: Prefer capturing by reference in lambdas that will be used locally, including passed to algorithms](#Rf-reference-capture)
 * [F.53: Avoid capturing by reference in lambdas that will be used non-locally, including returned, stored on the heap, or passed to another thread](#Rf-value-capture)
@@ -9518,7 +9630,7 @@ If you don't, an exception or a return might lead to a leak.
 
 ##### Example, bad
 
-    void f(const string& name)
+    void func(const string& name)
     {
         FILE* f = fopen(name, "r");            // open the file
         vector<char> buf(1024);
@@ -9530,7 +9642,7 @@ The allocation of `buf` might fail and leak the file handle.
 
 ##### Example
 
-    void f(const string& name)
+    void func(const string& name)
     {
         ifstream f{name};   // open the file
         vector<char> buf(1024);
@@ -16916,7 +17028,7 @@ Metaprogramming rule summary:
 
 Other template rules summary:
 
-* [T.140: Name all operations with potential for reuse](#Rt-name)
+* [T.140: If an operation can be reused, give it a name](#Rt-name)
 * [T.141: Use an unnamed lambda if you need a simple function object in one place only](#Rt-lambda)
 * [T.142: Use template variables to simplify notation](#Rt-var)
 * [T.143: Don't write unintentionally non-generic code](#Rt-non-generic)
@@ -18772,90 +18884,13 @@ Write your own "advanced TMP support" only if you really have to.
 
 ## <a name="SS-temp-other"></a>Other template rules
 
-### <a name="Rt-name"></a>T.140: Name all operations with potential for reuse
+### <a name="Rt-name"></a>T.140: If an operation can be reused, give it a name](#Rt-name
 
-##### Reason
-
-Documentation, readability, opportunity for reuse.
-
-##### Example
-
-    struct Rec {
-        string name;
-        string addr;
-        int id;         // unique identifier
-    };
-
-    bool same(const Rec& a, const Rec& b)
-    {
-        return a.id == b.id;
-    }
-
-    vector<Rec*> find_id(const string& name);    // find all records for "name"
-
-    auto x = find_if(vr.begin(), vr.end(),
-        [&](Rec& r) {
-            if (r.name.size() != n.size()) return false; // name to compare to is in n
-            for (int i = 0; i < r.name.size(); ++i)
-                if (tolower(r.name[i]) != tolower(n[i])) return false;
-            return true;
-        }
-    );
-
-There is a useful function lurking here (case insensitive string comparison), as there often is when lambda arguments get large.
-
-    bool compare_insensitive(const string& a, const string& b)
-    {
-        if (a.size() != b.size()) return false;
-        for (int i = 0; i < a.size(); ++i) if (tolower(a[i]) != tolower(b[i])) return false;
-        return true;
-    }
-
-    auto x = find_if(vr.begin(), vr.end(),
-        [&](Rec& r) { compare_insensitive(r.name, n); }
-    );
-
-Or maybe (if you prefer to avoid the implicit name binding to n):
-
-    auto cmp_to_n = [&n](const string& a) { return compare_insensitive(a, n); };
-
-    auto x = find_if(vr.begin(), vr.end(),
-        [](const Rec& r) { return cmp_to_n(r.name); }
-    );
-
-##### Note
-
-whether functions, lambdas, or operators.
-
-##### Exception
-
-* Lambdas logically used only locally, such as an argument to `for_each` and similar control flow algorithms.
-* Lambdas as [initializers](#???)
-
-##### Enforcement
-
-* (hard) flag similar lambdas
-* ???
+See [F.10](#Rf-name)
 
 ### <a name="Rt-lambda"></a>T.141: Use an unnamed lambda if you need a simple function object in one place only
 
-##### Reason
-
-That makes the code concise and gives better locality than alternatives.
-
-##### Example
-
-    auto earlyUsersEnd = std::remove_if(users.begin(), users.end(),
-                                        [](const User &a) { return a.id > 100; });
-
-
-##### Exception
-
-Naming a lambda can be useful for clarity even if it is used only once.
-
-##### Enforcement
-
-* Look for identical and near identical lambdas (to be replaced with named functions or named lambdas).
+See [F.11](#Rf-lambda)
 
 ### <a name="Rt-var"></a>T.142?: Use template variables to simplify notation
 
@@ -19075,13 +19110,13 @@ Use header files to represent interfaces and to emphasize logical structure.
 Source file rule summary:
 
 * [SF.1: Use a `.cpp` suffix for code files and `.h` for interface files if your project doesn't already follow another convention](#Rs-file-suffix)
-* [SF.2: A `.h` file must not contain object definitions or non-inline function definitions](#Rs-inline)
-* [SF.3: Use `.h` files for all declarations used in multiple source files](#Rs-declaration-header)
-* [SF.4: Include `.h` files before other declarations in a file](#Rs-include-order)
-* [SF.5: A `.cpp` file must include the `.h` file(s) that defines its interface](#Rs-consistency)
+* [SF.2: A header file must not contain object definitions or non-inline function definitions](#Rs-inline)
+* [SF.3: Use header files for all declarations used in multiple source files](#Rs-declaration-header)
+* [SF.4: Include header files before other declarations in a file](#Rs-include-order)
+* [SF.5: A `.cpp` file must include the header file(s) that defines its interface](#Rs-consistency)
 * [SF.6: Use `using namespace` directives for transition, for foundation libraries (such as `std`), or within a local scope (only)](#Rs-using)
 * [SF.7: Don't write `using namespace` at global scope in a header file](#Rs-using-directive)
-* [SF.8: Use `#include` guards for all `.h` files](#Rs-guards)
+* [SF.8: Use `#include` guards for all header files](#Rs-guards)
 * [SF.9: Avoid cyclic dependencies among source files](#Rs-cycles)
 * [SF.10: Avoid dependencies on implicitly `#include`d names](#Rs-implicit)
 * [SF.11: Header files should be self-contained](#Rs-contained)
@@ -19093,52 +19128,9 @@ Source file rule summary:
 
 ### <a name="Rs-file-suffix"></a>SF.1: Use a `.cpp` suffix for code files and `.h` for interface files if your project doesn't already follow another convention
 
-##### Reason
+See [NL.27](#Rl-file-suffix)
 
-It's a longstanding convention.
-But consistency is more important, so if your project uses something else, follow that.
-
-##### Note
-
-This convention reflects a common use pattern:
-Headers are more often shared with C to compile as both C++ and C, which typically uses `.h`,
-and it's easier to name all headers `.h` instead of having different extensions for just those headers that are intended to be shared with C.
-On the other hand, implementation files are rarely shared with C and so should typically be distinguished from `.c` files,
-so it's normally best to name all C++ implementation files something else (such as `.cpp`).
-
-The specific names `.h` and `.cpp` are not required (just recommended as a default) and other names are in widespread use.
-Examples are `.hh`, `.C`, and `.cxx`. Use such names equivalently.
-In this document, we refer to `.h` and `.cpp` as a shorthand for header and implementation files,
-even though the actual extension might be different.
-
-Your IDE (if you use one) might have strong opinions about suffixes.
-
-##### Example
-
-    // foo.h:
-    extern int a;   // a declaration
-    extern void foo();
-
-    // foo.cpp:
-    int a;   // a definition
-    void foo() { ++a; }
-
-`foo.h` provides the interface to `foo.cpp`. Global variables are best avoided.
-
-##### Example, bad
-
-    // foo.h:
-    int a;   // a definition
-    void foo() { ++a; }
-
-`#include <foo.h>` twice in a program and you get a linker error for two one-definition-rule violations.
-
-##### Enforcement
-
-* Flag non-conventional file names.
-* Check that `.h` and `.cpp` (and equivalents) follow the rules below.
-
-### <a name="Rs-inline"></a>SF.2: A `.h` file must not contain object definitions or non-inline function definitions
+### <a name="Rs-inline"></a>SF.2: A header file must not contain object definitions or non-inline function definitions
 
 ##### Reason
 
@@ -19162,9 +19154,9 @@ Including entities subject to the one-definition rule leads to linkage errors.
 
 Linking `file1.cpp` and `file2.cpp` will give two linker errors.
 
-**Alternative formulation**: A `.h` file must contain only:
+**Alternative formulation**: A header file must contain only:
 
-* `#include`s of other `.h` files (possibly with include guards)
+* `#include`s of other header files (possibly with include guards)
 * templates
 * class definitions
 * function declarations
@@ -19179,7 +19171,7 @@ Linking `file1.cpp` and `file2.cpp` will give two linker errors.
 
 Check the positive list above.
 
-### <a name="Rs-declaration-header"></a>SF.3: Use `.h` files for all declarations used in multiple source files
+### <a name="Rs-declaration-header"></a>SF.3: Use header files for all declarations used in multiple source files
 
 ##### Reason
 
@@ -19201,7 +19193,7 @@ The user of `bar` cannot know if the interface used is complete and correct. At 
 
 * Flag declarations of entities in other source files not placed in a `.h`.
 
-### <a name="Rs-include-order"></a>SF.4: Include `.h` files before other declarations in a file
+### <a name="Rs-include-order"></a>SF.4: Include header files before other declarations in a file
 
 ##### Reason
 
@@ -19247,7 +19239,7 @@ However
 
 Easy.
 
-### <a name="Rs-consistency"></a>SF.5: A `.cpp` file must include the `.h` file(s) that defines its interface
+### <a name="Rs-consistency"></a>SF.5: A `.cpp` file must include the header file(s) that defines its interface
 
 ##### Reason
 
@@ -19375,7 +19367,7 @@ to name their own UDLs `operator""_x` - they will not collide with the standard 
 
 Flag `using namespace` at global scope in a header file.
 
-### <a name="Rs-guards"></a>SF.8: Use `#include` guards for all `.h` files
+### <a name="Rs-guards"></a>SF.8: Use `#include` guards for all header files
 
 ##### Reason
 
@@ -20438,7 +20430,7 @@ Non-rule summary:
 * [NR.1: Don't insist that all declarations should be at the top of a function](#Rnr-top)
 * [NR.2: Don't insist to have only a single `return`-statement in a function](#Rnr-single-return)
 * [NR.3: Don't avoid exceptions](#Rnr-no-exceptions)
-* [NR.4: Don't insist on placing each class declaration in its own source file](#Rnr-lots-of-files)
+* [NR.4: Don't insist on placing each class definition in its own source file](#Rnr-lots-of-files)
 * [NR.5: Don't use two-phase initialization](#Rnr-two-phase-init)
 * [NR.6: Don't place all cleanup actions at the end of a function and `goto exit`](#Rnr-goto-exit)
 * [NR.7: Don't make all data members `protected`](#Rnr-protected-data)
@@ -20626,7 +20618,7 @@ Remember
 * [RAII](#Re-raii)
 * Contracts/assertions: Use GSL's `Expects` and `Ensures` (until we get language support for contracts)
 
-### <a name="Rnr-lots-of-files"></a>NR.4: Don't insist on placing each class declaration in its own source file
+### <a name="Rnr-lots-of-files"></a>NR.4: Don't insist on placing each class definition in its own source file
 
 ##### Reason
 
@@ -21295,6 +21287,7 @@ Naming and layout rules:
 * [NL.21: Declare one name (only) per declaration](#Rl-dcl)
 * [NL.25: Don't use `void` as an argument type](#Rl-void)
 * [NL.26: Use conventional `const` notation](#Rl-const)
+* [NL.27: Use a `.cpp` suffix for code files and `.h` for interface files](#Rl-file-suffix)
 
 Most of these rules are aesthetic and programmers hold strong opinions.
 IDEs also tend to have defaults and a range of alternatives.
@@ -21906,6 +21899,53 @@ This rule was added after many requests for guidance.
 ##### Enforcement
 
 Flag `const` used as a suffix for a type.
+
+### <a name="Rl-file-suffix"></a>NL.27: Use a `.cpp` suffix for code files and `.h` for interface files
+
+##### Reason
+
+It's a longstanding convention.
+But consistency is more important, so if your project uses something else, follow that.
+
+##### Note
+
+This convention reflects a common use pattern:
+Headers are more often shared with C to compile as both C++ and C, which typically uses `.h`,
+and it's easier to name all headers `.h` instead of having different extensions for just those headers that are intended to be shared with C.
+On the other hand, implementation files are rarely shared with C and so should typically be distinguished from `.c` files,
+so it's normally best to name all C++ implementation files something else (such as `.cpp`).
+
+The specific names `.h` and `.cpp` are not required (just recommended as a default) and other names are in widespread use.
+Examples are `.hh`, `.C`, and `.cxx`. Use such names equivalently.
+In this document, we refer to `.h` and `.cpp` as a shorthand for header and implementation files,
+even though the actual extension might be different.
+
+Your IDE (if you use one) might have strong opinions about suffixes.
+
+##### Example
+
+    // foo.h:
+    extern int a;   // a declaration
+    extern void foo();
+
+    // foo.cpp:
+    int a;   // a definition
+    void foo() { ++a; }
+
+`foo.h` provides the interface to `foo.cpp`. Global variables are best avoided.
+
+##### Example, bad
+
+    // foo.h:
+    int a;   // a definition
+    void foo() { ++a; }
+
+`#include <foo.h>` twice in a program and you get a linker error for two one-definition-rule violations.
+
+##### Enforcement
+
+* Flag non-conventional file names.
+* Check that `.h` and `.cpp` (and equivalents) follow the rules below.
 
 # <a name="S-faq"></a>FAQ: Answers to frequently asked questions
 
