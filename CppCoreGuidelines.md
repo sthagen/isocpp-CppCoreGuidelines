@@ -3316,7 +3316,7 @@ explicit `move` may be helpful to avoid copying:
         return { move(large1), move(large2) }; // no copies
     }
 
-Alternatively, 
+Alternatively,
 
     pair<LargeObject, LargeObject> f(const string& input)
     {
@@ -6891,7 +6891,7 @@ This is also type-unsafe and overwrites the vtable.
 
 ##### Enforcement
 
-* Flag passing a non-trivially-copyable type to `memset` or `memcpy`. 
+* Flag passing a non-trivially-copyable type to `memset` or `memcpy`.
 
 ## <a name="SS-containers"></a>C.con: Containers and other resource handles
 
@@ -7466,7 +7466,7 @@ Problems:
 and all classes derived from `Shape` and all code using `Shape` will need to be reviewed, possibly changed, and probably recompiled.
 
 The implementation of `Shape::move()` is an example of implementation inheritance:
-we have defined `move()` once and for all for all derived classes.
+we have defined `move()` once and for all, for all derived classes.
 The more code there is in such base class member function implementations and the more data is shared by placing it in the base,
 the more benefits we gain - and the less stable the hierarchy is.
 
@@ -9214,7 +9214,7 @@ The default is the easiest to read and write.
 
 ##### Note
 
-Specifying the underlying type is necessary in forward declarations of enumerations:
+Specifying the underlying type is necessary to forward-declare an enum or enum class:
 
     enum Flags : char;
 
@@ -9224,6 +9224,9 @@ Specifying the underlying type is necessary in forward declarations of enumerati
 
     enum Flags : char { /* ... */ };
 
+or to ensure that values of that type have a specified bit-precision:
+
+    enum Bitboard : uint64_t { /* ... */ };
 
 ##### Enforcement
 
@@ -9563,7 +9566,7 @@ Instead, use a local variable:
 ##### Enforcement
 
 * (Moderate) Warn if an object is allocated and then deallocated on all paths within a function. Suggest it should be a local stack object instead.
-* (Simple) Warn if a local `Unique_pointer` or `Shared_pointer` is not moved, copied, reassigned or `reset` before its lifetime ends.
+* (Simple) Warn if a local `Unique_pointer` or `Shared_pointer` that is not moved, copied, reassigned or `reset` before its lifetime ends is not declared `const`.
 Exception: Do not produce such a warning on a local `Unique_pointer` to an unbounded array. (See below.)
 
 ##### Exception
@@ -9785,19 +9788,17 @@ Consider:
 
     void f()
     {
-        X x;
-        X* p1 { new X };              // see also ???
-        unique_ptr<X> p2 { new X };   // unique ownership; see also ???
-        shared_ptr<X> p3 { new X };   // shared ownership; see also ???
-        auto p4 = make_unique<X>();   // unique_ownership, preferable to the explicit use "new"
-        auto p5 = make_shared<X>();   // shared ownership, preferable to the explicit use "new"
+        X* p1 { new X };              // bad, p1 will leak
+        auto p2 = make_unique<X>();   // good, unique ownership
+        auto p3 = make_shared<X>();   // good, shared ownership
     }
 
 This will leak the object used to initialize `p1` (only).
 
 ##### Enforcement
 
-(Simple) Warn if the return value of `new` or a function call with return value of pointer type is assigned to a raw pointer.
+* (Simple) Warn if the return value of `new` is assigned to a raw pointer.
+* (Simple) Warn if the result of a function returning a raw owning pointer is assigned to a raw pointer.
 
 ### <a name="Rr-unique"></a>R.21: Prefer `unique_ptr` over `shared_ptr` unless you need to share ownership
 
@@ -10269,7 +10270,7 @@ The more traditional and lower-level near-equivalent is longer, messier, harder 
             is.read(s, maxstring);
             res[elemcount++] = s;
         }
-        nread = &elemcount;
+        *nread = elemcount;
         return res;
     }
 
@@ -13013,7 +13014,7 @@ Often, a loop that requires a `break` is a good candidate for a function (algori
         }
         /* then do something with value */
     }
-    
+
     //BETTER: create a function and return inside loop
     T search(const std::vector<T> &vec)
     {
@@ -13022,7 +13023,7 @@ Often, a loop that requires a `break` is a good candidate for a function (algori
         }
         return T(); //default value
     }
-    
+
     void use2()
     {
         std::vector<T> vec = {/* initialized with some values */};
@@ -13038,7 +13039,7 @@ Often, a loop that uses `continue` can equivalently and as clearly be expressed 
         if (item > 10) continue;
         /* do something with item */
     }
-    
+
     for (int item : vec) {  // GOOD
         if (item%2 != 0 && item != 5 && item <= 10) {
             /* do something with item */
@@ -13888,7 +13889,7 @@ In this, the `sort` interfaces shown here still have a weakness:
 They implicitly rely on the element type having less-than (`<`) defined.
 To complete the interface, we need a second version that accepts a comparison criterion:
 
-    // compare elements of c using p
+    // compare elements of c using r
     template<random_access_range R, class C> requires sortable<R, C>
     void sort(R&& r, C c);
 
@@ -13971,7 +13972,7 @@ Once your first initial implementation is complete, review it; once you deploy i
 ##### Note
 
 A need for efficiency does not imply a need for [low-level code](#Rper-low).
-High-level code does not imply slow or bloated.
+High-level code isn't necessarily slow or bloated.
 
 ##### Note
 
@@ -13996,7 +13997,7 @@ One question that can be useful is
 ##### Note
 
 This rule does not contradict the [Don't optimize prematurely](#Rper-Knuth) rule.
-It complements it encouraging developers enable later - appropriate and non-premature - optimization, if and where needed.
+It complements it, encouraging developers to enable later - appropriate and non-premature - optimization, if and where needed.
 
 ##### Enforcement
 
@@ -14077,12 +14078,12 @@ There are similar techniques for selecting the optimal function to call.
 
 ##### Note
 
-The ideal is *not* to try execute everything at compile time.
-Obviously, most computations depend on inputs so they can't be moved to compile time,
+The ideal is *not* to try to execute everything at compile time.
+Obviously, most computations depend on inputs, so they can't be moved to compile time,
 but beyond that logical constraint is the fact that complex compile-time computation can seriously increase compile times
 and complicate debugging.
 It is even possible to slow down code by compile-time computation.
-This is admittedly rare, but by factoring out a general computation into separate optimal sub-calculations it is possible to render the instruction cache less effective.
+This is admittedly rare, but by factoring out a general computation into separate optimal sub-calculations, it is possible to render the instruction cache less effective.
 
 ##### Enforcement
 
@@ -14130,7 +14131,7 @@ Performance is typically dominated by memory access times.
 
 ##### Reason
 
-Performance is very sensitive to cache performance and cache algorithms favor simple (usually linear) access to adjacent data.
+Performance is very sensitive to cache performance, and cache algorithms favor simple (usually linear) access to adjacent data.
 
 ##### Example
 
@@ -15215,7 +15216,7 @@ Coroutine rule summary:
 
 ##### Reason
 
-Usage patterns that are correct with normal lambdas are hazardous with coroutine lambdas. The obvious pattern of capturing variables will result in accessing freed memory after the first suspension point, even for refcounted smart pointers and copyable types.  
+Usage patterns that are correct with normal lambdas are hazardous with coroutine lambdas. The obvious pattern of capturing variables will result in accessing freed memory after the first suspension point, even for refcounted smart pointers and copyable types.
 
 A lambda results in a closure object with storage, often on the stack, that will go out of scope at some point.  When the closure object goes out of scope the captures will also go out of scope.  Normal lambdas will have finished executing by this time so it is not a problem.  Coroutine lambdas may resume from suspension after the closure object has destructed and at that point all captures will be use-after-free memory access.
 
@@ -16205,7 +16206,7 @@ no useful information can be added at the point of detection:
     throw std::runtime_error("someting bad"); // good
 
     // ...
-    
+
     throw std::invalid_argument("i is not even"); // good
 
 `enum` classes are also allowed:
@@ -21168,6 +21169,8 @@ Eventually, use [the one voted into C++17](http://www.open-std.org/jtc1/sc22/wg2
 Some of the GSL types listed below might not be supported in the library you use due to technical reasons such as limitations in the current versions of C++.
 Therefore, please consult your GSL documentation to find out more.
 
+For each GSL type below we state an invariant for that type. That invariant holds as long as user code only changes the state of a GSL object using the type's provided member/free functions (i.e., user code does not bypass the type's interface to change the object's value/bits by violating any other Guidelines rule).
+
 Summary of GSL components:
 
 * [GSL.view: Views](#SS-views)
@@ -21217,7 +21220,9 @@ If something is not supposed to be `nullptr`, say so:
 * `span<T>`       // `[p:p+n)`, constructor from `{p, q}` and `{p, n}`; `T` is the pointer type
 * `span_p<T>`     // `{p, predicate}` `[p:q)` where `q` is the first element for which `predicate(*p)` is true
 
-A `span<T>` refers to zero or more mutable `T`s unless `T` is a `const` type.
+A `span<T>` refers to zero or more mutable `T`s unless `T` is a `const` type. All accesses to elements of the span, notably via `operator[]`, are guaranteed to be bounds-checked by default.
+
+> Note: GSL's `span` (initially called `array_view`) was proposed for inclusion in the C++ standard library, and was adopted (with changes to its name and interface) except only that `std::span` does not provide for guaranteed bounds checking. Therefore GSL changed `span`'s name and interface to track `std::span` and should be exactly the same as `std::span`, and the only difference should be that GSL `span` is fully bounds-safe by default. If bounds-safety might affect its interface, then those change proposals should be brought back via the ISO C++ committee to keep `gsl::span` interface-compatible with `std::span`. If a future evolution of `std::span` adds bounds checking, `gsl::span` can be removed.
 
 "Pointer arithmetic" is best done within `span`s.
 A `char*` that points to more than one `char` but is not a C-style string (e.g., a pointer into an input buffer) should be represented by a `span`.
