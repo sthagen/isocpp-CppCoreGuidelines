@@ -1070,7 +1070,7 @@ There are several more performance bugs and gratuitous complication.
     }
 
 This is actually an example from production code.
-We can see that in our condition we have `i < strlen(s)`. This expression will be evaluated on every iteration of the loop, which means that `strlen` must walk through string every loop to discover its length. While the string contents are changing, it's assumed that `toLower` will not affect the length of the string, so it's better to cache the length outside the loop and not incur that cost each iteration.
+We can see that in our condition we have `i < strlen(s)`. This expression will be evaluated on every iteration of the loop, which means that `strlen` must walk through string every loop to discover its length. While the string contents are changing, it's assumed that `tolower` will not affect the length of the string, so it's better to cache the length outside the loop and not incur that cost each iteration.
 
 ##### Note
 
@@ -2376,7 +2376,7 @@ Parameter passing semantic rules:
 * [F.45: Don't return a `T&&`](#Rf-return-ref-ref)
 * [F.46: `int` is the return type for `main()`](#Rf-main)
 * [F.47: Return `T&` from assignment operators](#Rf-assignment-op)
-* [F.48: Don't `return std::move(local)`](#Rf-return-move-local)
+* [F.48: Don't return `std::move(local)`](#Rf-return-move-local)
 * [F.49: Don't return `const T`](#Rf-return-const)
 
 Other function rules:
@@ -2978,6 +2978,11 @@ Use the advanced techniques only after demonstrating need, and document that nee
 
 For passing sequences of characters see [String](#SS-string).
 
+##### Exception
+
+To express shared ownership using `shared_ptr` types, rather than following guidelines F.16-21,
+follow [R.34](#Rr-sharedptrparam-owner), [R.35](#Rr-sharedptrparam), and [R.36](#Rr-sharedptrparam-const).
+
 ### <a name="Rf-in"></a>F.16: For "in" parameters, pass cheaply-copied types by value and others by reference to `const`
 
 ##### Reason
@@ -3028,6 +3033,11 @@ If you need the notion of an optional value, use a pointer, `std::optional`, or 
   Suggest using a reference to `const` instead.
 * (Simple) ((Foundation)) Warn when a parameter passed by reference to `const` has a size less or equal than `2 * sizeof(void*)`. Suggest passing by value instead.
 * (Simple) ((Foundation)) Warn when a parameter passed by reference to `const` is `move`d.
+
+##### Exception
+
+To express shared ownership using `shared_ptr` types, follow [R.34](#Rr-sharedptrparam-owner) or [R.36](#Rr-sharedptrparam-const),
+depending on whether or not the function unconditionally takes a reference to the argument.
 
 ### <a name="Rf-inout"></a>F.17: For "in-out" parameters, pass by reference to non-`const`
 
@@ -3107,6 +3117,10 @@ For example:
         // use p ... possibly std::move(p) onward somewhere else
     }   // p gets destroyed
 
+##### Exception
+
+If the "will-move-from" parameter is a `shared_ptr` follow [R.34](#Rr-sharedptrparam-owner) and pass the `shared_ptr` by value.
+
 ##### Enforcement
 
 * Flag all `X&&` parameters (where `X` is not a template type parameter name) where the function body uses them without `std::move`.
@@ -3139,8 +3153,8 @@ Sometimes you may forward a composite parameter piecewise, each subobject once o
     inline auto test(PairLike&&... pairlike)
     {
         // ...
-        f1( some, args, and, forward<PairLike>(pairlike).first );           // forward .first
-        f2( and, forward<PairLike>(pairlike).second, in, another, call );   // forward .second
+        f1(some, args, and, forward<PairLike>(pairlike).first);           // forward .first
+        f2(and, forward<PairLike>(pairlike).second, in, another, call);   // forward .second
     }
 
 ##### Enforcement
@@ -4637,7 +4651,7 @@ Concrete type rule summary:
 
 * [C.10: Prefer concrete types over class hierarchies](#Rc-concrete)
 * [C.11: Make concrete types regular](#Rc-regular)
-* [C.12: Don't make data members `const` or references](#Rc-constref)
+* [C.12: Don't make data members `const` or references in a copyable or movable type](#Rc-constref)
 
 
 ### <a name="Rc-concrete"></a>C.10: Prefer concrete types over class hierarchies
@@ -4734,11 +4748,11 @@ so they can't be regular; instead, they tend to be move-only.
 ???
 
 
-### <a name="Rc-constref"></a>C.12: Don't make data members `const` or references
+### <a name="Rc-constref"></a>C.12: Don't make data members `const` or references in a copyable or movable type
 
 ##### Reason
 
-They are not useful, and make types difficult to use by making them either uncopyable or partially uncopyable for subtle reasons.
+`const` and reference data members are not useful in a copyable or movable type, and make such types difficult to use by making them at least partly uncopyable/unmovable for subtle reasons.
 
 ##### Example; bad
 
@@ -4756,7 +4770,7 @@ If you need a member to point to something, use a pointer (raw or smart, and `gs
 
 ##### Enforcement
 
-Flag a data member that is `const`, `&`, or `&&`.
+Flag a data member that is `const`, `&`, or `&&` in a type that has any copy or move operation.
 
 
 
