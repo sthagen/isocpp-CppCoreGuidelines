@@ -4938,6 +4938,7 @@ defined as defaulted.
 
     class AbstractBase {
     public:
+        virtual void foo() = 0;  // at least one abstract method to make the class abstract
         virtual ~AbstractBase() = default;
         // ...
     };
@@ -19406,10 +19407,6 @@ and M functions each containing a `using namespace X`with N lines of code in tot
 
 [Don't write `using namespace` at global scope in a header file](#Rs-using-directive).
 
-##### Enforcement
-
-Flag multiple `using namespace` directives for different namespaces in a single source file.
-
 ### <a name="Rs-using-directive"></a>SF.7: Don't write `using namespace` at global scope in a header file
 
 ##### Reason
@@ -19757,7 +19754,17 @@ Additions to `std` might clash with future versions of the standard.
 
 ##### Example
 
-    ???
+    namespace std { // BAD: violates standard
+        class My_vector {
+        //     . . .
+        };
+    }
+
+    namespace Foo { // GOOD: user namespace is allowed 
+        class My_vector {
+        //     . . .
+        };
+    }
 
 ##### Enforcement
 
