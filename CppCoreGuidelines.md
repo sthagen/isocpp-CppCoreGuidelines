@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ Core Guidelines
 
-October 6, 2022
+April 13, 2023
 
 Editors:
 
@@ -644,7 +644,9 @@ Some language constructs express intent better than others.
 
 If two `int`s are meant to be the coordinates of a 2D point, say so:
 
-    draw_line(int, int, int, int);  // obscure
+    draw_line(int, int, int, int);  // obscure: (x1,y1,x2,y2)? (x,y,h,w)? ...?
+                                    // need to look up documentation to know
+
     draw_line(Point, Point);        // clearer
 
 ##### Enforcement
@@ -2385,7 +2387,7 @@ Other function rules:
 * [F.51: Where there is a choice, prefer default arguments over overloading](#Rf-default-args)
 * [F.52: Prefer capturing by reference in lambdas that will be used locally, including passed to algorithms](#Rf-reference-capture)
 * [F.53: Avoid capturing by reference in lambdas that will be used non-locally, including returned, stored on the heap, or passed to another thread](#Rf-value-capture)
-* [F.54: If you capture `this`, capture all variables explicitly (no default capture)](#Rf-this-capture)
+* [F.54: When writing a lambda that captures `this` or any class data member, don't use `[=]` default capture](#Rf-this-capture)
 * [F.55: Don't use `va_arg` arguments](#F-varargs)
 * [F.56: Avoid unnecessary condition nesting](#F-nesting)
 
@@ -4118,7 +4120,7 @@ If the `this` pointer must be captured, consider using `[*this]` capture, which 
 * (Simple) Warn when capture-list contains a reference to a locally declared variable
 * (Complex) Flag when capture-list contains a reference to a locally declared variable and the lambda is passed to a non-`const` and non-local context
 
-### <a name="Rf-this-capture"></a>F.54: If you capture `this`, capture all variables explicitly (no default capture)
+### <a name="Rf-this-capture"></a>F.54: When writing a lambda that captures `this` or any class data member, don't use `[=]` default capture
 
 ##### Reason
 
@@ -4154,11 +4156,11 @@ It's confusing. Writing `[=]` in a member function appears to capture by value, 
 
 ##### Note
 
-This is under active discussion in standardization, and might be addressed in a future version of the standard by adding a new capture mode or possibly adjusting the meaning of `[=]`. For now, just be explicit.
+If you intend to capture a copy of all class data members, consider C++17 `[*this]`.
 
 ##### Enforcement
 
-* Flag any lambda capture-list that specifies a capture-default (e.g., `=` or `&`) and also captures `this` (whether explicitly such as `[&, this]` or via default capture such as `[=]` and a use of `this` in the body)
+* Flag any lambda capture-list that specifies a capture-default of `[=]` and also captures `this` (whether explicitly or via the default capture and a use of `this` in the body)
 
 ### <a name="F-varargs"></a>F.55: Don't use `va_arg` arguments
 
@@ -9068,9 +9070,13 @@ Instead use an `enum`:
 
 We used an `enum class` to avoid name clashes.
 
+##### Note
+
+Also consider `constexpr` and `const inline` variables.
+
 ##### Enforcement
 
-Flag macros that define integer values.
+Flag macros that define integer values. Use `enum` or `const inline` or another non-macro alternative instead.
 
 
 ### <a name="Renum-set"></a>Enum.2: Use enumerations to represent sets of related named constants
@@ -9150,7 +9156,7 @@ Convenience of use and avoidance of errors.
 
 ##### Example
 
-    enum Day { mon, tue, wed, thu, fri, sat, sun };
+    enum class Day { mon, tue, wed, thu, fri, sat, sun };
 
     Day& operator++(Day& d)
     {
@@ -19755,15 +19761,19 @@ Additions to `std` might clash with future versions of the standard.
 ##### Example
 
     namespace std { // BAD: violates standard
-        class My_vector {
+
+    class My_vector {
         //     . . .
-        };
+    };
+
     }
 
-    namespace Foo { // GOOD: user namespace is allowed 
-        class My_vector {
+    namespace Foo { // GOOD: user namespace is allowed
+
+    class My_vector {
         //     . . .
-        };
+    };
+
     }
 
 ##### Enforcement
