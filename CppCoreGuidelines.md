@@ -241,7 +241,7 @@ All C++ programmers. This includes [programmers who might consider C](#S-cpl).
 
 ## <a name="SS-aims"></a>In.aims: Aims
 
-The purpose of this document is to help developers to adopt modern C++ (currently C++17) and to achieve a more uniform style across code bases.
+The purpose of this document is to help developers to adopt modern C++ (currently C++20 and C++17) and to achieve a more uniform style across code bases.
 
 We do not suffer the delusion that every one of these rules can be effectively applied to every code base. Upgrading old systems is hard. However, we do believe that a program that uses a rule is less error-prone and more maintainable than one that does not. Often, rules also lead to faster/easier initial development.
 As far as we can tell, these rules lead to code that performs as well or better than older, more conventional techniques; they are meant to follow the zero-overhead principle ("what you don't use, you don't pay for" or "when you use an abstraction mechanism appropriately, you get at least as good performance as if you had handcoded using lower-level language constructs").
@@ -3152,7 +3152,7 @@ Usually you forward the entire parameter (or parameter pack, using `...`) exactl
 Sometimes you may forward a composite parameter piecewise, each subobject once on every static control flow path:
 
     template<class PairLike>
-    inline auto test(PairLike&&... pairlike)
+    inline auto test(PairLike&& pairlike)
     {
         // ...
         f1(some, args, and, forward<PairLike>(pairlike).first);           // forward .first
@@ -5010,7 +5010,7 @@ Users will be surprised if copy/move construction and copy/move assignment do lo
         shared_ptr<Impl> p;
     public:
         Silly(const Silly& a) : p(make_shared<Impl>()) { *p = *a.p; }   // deep copy
-        Silly& operator=(const Silly& a) { p = a.p; }   // shallow copy
+        Silly& operator=(const Silly& a) { p = a.p; return *this; }   // shallow copy
         // ...
     };
 
@@ -6387,7 +6387,7 @@ If `x = x` changes the value of `x`, people will be surprised and bad errors can
         string s;
         int i;
     public:
-        Foo& operator=(Foo&& a);
+        Foo& operator=(Foo&& a) noexcept;
         // ...
     };
 
@@ -6436,8 +6436,13 @@ A non-throwing move will be used more efficiently by standard-library and langua
     template<typename T>
     class Vector {
     public:
-        Vector(Vector&& a) noexcept :elem{a.elem}, sz{a.sz} { a.sz = 0; a.elem = nullptr; }
-        Vector& operator=(Vector&& a) noexcept { elem = a.elem; sz = a.sz; a.sz = 0; a.elem = nullptr; }
+        Vector(Vector&& a) noexcept :elem{a.elem}, sz{a.sz} { a.elem = nullptr; a.sz = 0; }
+        Vector& operator=(Vector&& a) noexcept {
+            delete elem;
+            elem = a.elem; a.elem = nullptr;
+            sz   = a.sz;   a.sz   = 0;
+            return *this;
+        }
         // ...
     private:
         T* elem;
@@ -13430,8 +13435,8 @@ Unsigned types support bit manipulation without surprises from sign bits.
 
 ##### Note
 
-Unsigned types can also be useful for modulo arithmetic.
-However, if you want modulo arithmetic add
+Unsigned types can also be useful for modular arithmetic.
+However, if you want modular arithmetic add
 comments as necessary noting the reliance on wraparound behavior, as such code
 can be surprising for many programmers.
 
@@ -13445,7 +13450,7 @@ can be surprising for many programmers.
 ##### Reason
 
 Because most arithmetic is assumed to be signed;
-`x - y` yields a negative number when `y > x` except in the rare cases where you really want modulo arithmetic.
+`x - y` yields a negative number when `y > x` except in the rare cases where you really want modular arithmetic.
 
 ##### Example
 
@@ -13475,7 +13480,7 @@ but if you had seen `us - (s + 2)` or `s += 2; ...; us - s`, would you reliably 
 
 ##### Exception
 
-Use unsigned types if you really want modulo arithmetic - add
+Use unsigned types if you really want modular arithmetic - add
 comments as necessary noting the reliance on overflow behavior, as such code
 is going to be surprising for many programmers.
 
@@ -13534,7 +13539,7 @@ Incrementing a value beyond a maximum value can lead to memory corruption and un
 
 ##### Exception
 
-Use unsigned types if you really want modulo arithmetic.
+Use unsigned types if you really want modular arithmetic.
 
 **Alternative**: For critical applications that can afford some overhead, use a range-checked integer and/or floating-point type.
 
@@ -13559,7 +13564,7 @@ Decrementing a value beyond a minimum value can lead to memory corruption and un
 
 ##### Exception
 
-Use unsigned types if you really want modulo arithmetic.
+Use unsigned types if you really want modular arithmetic.
 
 ##### Enforcement
 
@@ -13609,7 +13614,7 @@ This also applies to `%`.
 
 ##### Reason
 
-Choosing `unsigned` implies many changes to the usual behavior of integers, including modulo arithmetic,
+Choosing `unsigned` implies many changes to the usual behavior of integers, including modular arithmetic,
 can suppress warnings related to overflow,
 and opens the door for errors related to signed/unsigned mixes.
 Using `unsigned` doesn't actually eliminate the possibility of negative values.
@@ -13631,7 +13636,7 @@ Consider:
     auto a = area(height, 2);   // if the input is -2 a becomes 4294967292
 
 Remember that `-1` when assigned to an `unsigned int` becomes the largest `unsigned int`.
-Also, since unsigned arithmetic is modulo arithmetic the multiplication didn't overflow, it wrapped around.
+Also, since unsigned arithmetic is modular arithmetic the multiplication didn't overflow, it wrapped around.
 
 ##### Example
 
@@ -17519,7 +17524,7 @@ and should be used only as building blocks for meaningful concepts, rather than 
 
     template<typename T>
     // bad; insufficient
-    concept Addable = requires(T a, T b) { a+b; };
+    concept Addable = requires(T a, T b) { a + b; };
 
     template<Addable N>
     auto algo(const N& a, const N& b) // use two numbers
@@ -17547,7 +17552,7 @@ The ability to specify meaningful semantics is a defining characteristic of a tr
 
     template<typename T>
     // The operators +, -, *, and / for a number are assumed to follow the usual mathematical rules
-    concept Number = requires(T a, T b) { a+b; a-b; a*b; a/b; };
+    concept Number = requires(T a, T b) { a + b; a - b; a * b; a / b; };
 
     template<Number N>
     auto algo(const N& a, const N& b)
@@ -17588,7 +17593,7 @@ This is a specific variant of the general rule that [a concept must make semanti
 
 ##### Example, bad
 
-    template<typename T> concept Subtractable = requires(T a, T b) { a-b; };
+    template<typename T> concept Subtractable = requires(T a, T b) { a - b; };
 
 This makes no semantic sense.
 You need at least `+` to make `-` meaningful and useful.
@@ -17678,10 +17683,10 @@ Specifying semantics is a powerful design tool.
         // The operators +, -, *, and / for a number are assumed to follow the usual mathematical rules
         // axiom(T a, T b) { a + b == b + a; a - a == 0; a * (b + c) == a * b + a * c; /*...*/ }
         concept Number = requires(T a, T b) {
-            {a + b} -> convertible_to<T>;
-            {a - b} -> convertible_to<T>;
-            {a * b} -> convertible_to<T>;
-            {a / b} -> convertible_to<T>;
+            { a + b } -> convertible_to<T>;
+            { a - b } -> convertible_to<T>;
+            { a * b } -> convertible_to<T>;
+            { a / b } -> convertible_to<T>;
         };
 
 ##### Note
@@ -18966,7 +18971,7 @@ Write your own "advanced TMP support" only if you really have to.
 
 ## <a name="SS-temp-other"></a>Other template rules
 
-### <a name="Rt-name"></a>T.140: If an operation can be reused, give it a name](#Rt-name
+### <a name="Rt-name"></a>T.140: If an operation can be reused, give it a name
 
 See [F.10](#Rf-name)
 
