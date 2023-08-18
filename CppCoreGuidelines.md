@@ -2500,7 +2500,7 @@ If there was a need, we could further templatize `read()` and `print()` on the d
         // check for errors
     };
 
-    auto print(auto& output, const auto& value)
+    void print(auto& output, const auto& value)
     {
         output << value << "\n";
     }
@@ -7542,7 +7542,7 @@ For example, `center` has to be implemented by every class derived from `Shape`.
 
 ##### Example, dual hierarchy
 
-How can we gain the benefit of stable hierarchies from implementation hierarchies and the benefit of implementation reuse from implementation inheritance?
+How can we gain the benefit of stable hierarchies from interface hierarchies and the benefit of implementation reuse from implementation inheritance?
 One popular technique is dual hierarchies.
 There are many ways of implementing the idea of dual hierarchies; here, we use a multiple-inheritance variant.
 
@@ -8207,8 +8207,8 @@ Consider:
         cout << pb2->id(); // "D"
 
 
-        if (pb1->id() == "D") {         // looks innocent
-            D* pd = static_cast<D*>(pb1);
+        if (pb2->id() == "D") {         // looks innocent
+            D* pd = static_cast<D*>(pb2);
             // ...
         }
         // ...
@@ -8871,7 +8871,7 @@ The C++17 `variant` type (found in `<variant>`) does that for you:
     v = 123;        // v holds an int
     int x = get<int>(v);
     v = 123.456;    // v holds a double
-    w = get<double>(v);
+    double w = get<double>(v);
 
 ##### Enforcement
 
