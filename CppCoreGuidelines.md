@@ -3007,7 +3007,8 @@ When copying is cheap, nothing beats the simplicity and safety of copying, and f
 For advanced uses (only), where you really need to optimize for rvalues passed to "input-only" parameters:
 
 * If the function is going to unconditionally move from the argument, take it by `&&`. See [F.18](#Rf-consume).
-* If the function is going to keep a copy of the argument, in addition to passing by `const&` (for lvalues),
+* If the function is going to keep a locally modifiable copy of the argument only for its own local use, taking it by value is fine
+* If the function is going to keep a copy of the argument to pass to another destination (to another function, or store in a non-local location), in addition to passing by `const&` (for lvalues),
   add an overload that passes the parameter by `&&` (for rvalues) and in the body `std::move`s it to its destination. Essentially this overloads a "will-move-from"; see [F.18](#Rf-consume).
 * In special cases, such as multiple "input + copy" parameters, consider using perfect forwarding. See [F.19](#Rf-forward).
 
@@ -3932,11 +3933,13 @@ value) of any assignment operator.
 
 ##### Reason
 
-With guaranteed copy elision, it is now almost always a pessimization to expressly use `std::move` in a return statement.
+Returning a local variable implicitly moves it anyway.
+An explicit `std::move` is always a pessimization, because it prevents Return Value Optimization (RVO),
+which can eliminate the move completely. 
 
 ##### Example, bad
 
-    S f()
+    S bad()
     {
       S result;
       return std::move(result);
@@ -3944,9 +3947,10 @@ With guaranteed copy elision, it is now almost always a pessimization to express
 
 ##### Example, good
 
-    S f()
+    S good()
     {
       S result;
+      // Named RVO: move elision at best, move construction at worst
       return result;
     }
 
@@ -4148,8 +4152,6 @@ It's confusing. Writing `[=]` in a member function appears to capture by value, 
             // ...
 
             auto lambda = [=] { use(i, x); };   // BAD: "looks like" copy/value capture
-            // [&] has identical semantics and copies the this pointer under the current rules
-            // [=,this] and [&,this] are not much better, and confusing
 
             x = 42;
             lambda(); // calls use(0, 42);
