@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ Core Guidelines
 
-May 11, 2024
+Oct 3, 2024
 
 Editors:
 
@@ -4878,6 +4878,7 @@ It's the simplest and gives the cleanest semantics.
 
     struct Named_map {
     public:
+        Named_map() : name("empty") {}
         // ... no default operations declared ...
     private:
         string name;
