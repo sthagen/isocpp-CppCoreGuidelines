@@ -8031,11 +8031,6 @@ This rule is about using `final` on classes with virtual functions meant to be i
 
 ##### Note
 
-Capping an individual virtual function with `final` is error-prone as `final` can easily be overlooked when defining/overriding a set of functions.
-Fortunately, the compiler catches such mistakes: You cannot re-declare/re-open a `final` member in a derived class.
-
-##### Note
-
 Claims of performance improvements from `final` should be substantiated.
 Too often, such claims are based on conjecture or experience with other languages.
 
@@ -9998,14 +9993,9 @@ Using `unique_ptr` in this way both documents and enforces the function call's o
 
     void uses(widget*);            // just uses the widget
 
-##### Example, bad
-
-    void thinko(const unique_ptr<widget>&); // usually not what you want
-
 ##### Enforcement
 
 * (Simple) Warn if a function takes a `Unique_pointer<T>` parameter by lvalue reference and does not either assign to it or call `reset()` on it on at least one code path. Suggest taking a `T*` or `T&` instead.
-* (Simple) ((Foundation)) Warn if a function takes a `Unique_pointer<T>` parameter by reference to `const`. Suggest taking a `const T*` or `const T&` instead.
 
 ### <a name="Rr-reseat"></a>R.33: Take a `unique_ptr<widget>&` parameter to express that a function reseats the `widget`
 
@@ -10021,14 +10011,9 @@ Using `unique_ptr` in this way both documents and enforces the function call's r
 
     void reseat(unique_ptr<widget>&); // "will" or "might" reseat pointer
 
-##### Example, bad
-
-    void thinko(const unique_ptr<widget>&); // usually not what you want
-
 ##### Enforcement
 
 * (Simple) Warn if a function takes a `Unique_pointer<T>` parameter by lvalue reference and does not either assign to it or call `reset()` on it on at least one code path. Suggest taking a `T*` or `T&` instead.
-* (Simple) ((Foundation)) Warn if a function takes a `Unique_pointer<T>` parameter by reference to `const`. Suggest taking a `const T*` or `const T&` instead.
 
 ### <a name="Rr-sharedptrparam-owner"></a>R.34: Take a `shared_ptr<widget>` parameter to express shared ownership
 
