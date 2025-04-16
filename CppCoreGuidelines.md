@@ -21,9 +21,9 @@ The list of contributors is [here](#SS-ack).
 Problems:
 
 * The sets of rules have not been completely checked for completeness, consistency, or enforceability.
-* Triple question marks (???) mark known missing information
+* Triple question marks (???) mark known missing information.
 * Update reference sections; many pre-C++11 sources are too old.
-* For a more-or-less up-to-date to-do list see: [To-do: Unclassified proto-rules](#S-unclassified)
+* For a more-or-less up-to-date to-do list see: [To-do: Unclassified proto-rules](#S-unclassified).
 
 You can [read an explanation of the scope and structure of this Guide](#S-abstract) or just jump straight in:
 
@@ -2740,9 +2740,13 @@ low-level functions.
 Destructors, `swap` functions, move operations, and default constructors should never throw.
 See also [C.44](#Rc-default00).
 
+##### Note
+
+Care must be taken on base virtual functions and functions part of a public interface because declaring a function `noexcept` is establishing a guarantee that all current and future implementations must abide by.  For virtual function, all overriders must also be `noexcept` and removing `noexcept` from a function could break calling functions. 
+
 ##### Enforcement
 
-* Flag functions that are not `noexcept`, yet cannot throw.
+* (hard) Flag low-level functions that are not `noexcept`, yet cannot throw.
 * Flag throwing `swap`, `move`, destructors, and default constructors.
 
 ### <a name="Rf-smart"></a>F.7: For general use, take `T*` or `T&` arguments rather than smart pointers
@@ -12004,7 +12008,7 @@ I got
 
     3.29048e-321 666 666
 
-Surprised? I'm just glad I didn't crash the program.
+Surprised? It is actually undefined behavior, and so could also have crashed the program.
 
 ##### Note
 
@@ -20764,6 +20768,10 @@ Splitting initialization into two leads to weaker invariants,
 more complicated code (having to deal with semi-constructed objects),
 and errors (when we didn't deal correctly with semi-constructed objects consistently).
 
+##### Note
+
+Sometimes also called two-stage construction.
+
 ##### Example, bad
 
     // Old conventional style: many problems
@@ -20947,7 +20955,7 @@ Reference sections:
 
 ## <a name="SS-rules"></a>RF.rules: Coding rules
 
-* [AUTOSAR Guidelines for the use of the C++14 language in critical and safety-related systems v17.10](https://web.archive.org/web/20220629085753/https://www.autosar.org/fileadmin/user_upload/standards/adaptive/17-03/AUTOSAR_RS_CPP14Guidelines.pdf)
+* [AUTOSAR Guidelines for the use of the C++14 language in critical and safety-related systems v22.11](https://www.autosar.org/fileadmin/standards/R22-11/AP/AUTOSAR_RS_CPP14Guidelines.pdf) (obsolete, replaced by [MISRA C++:2023](https://misra.org.uk/product/misra-cpp2023/))
 * [Boost Library Requirements and Guidelines](http://www.boost.org/development/requirements.html).
   ???.
 * [Bloomberg: BDE C++ Coding](https://github.com/bloomberg/bde/wiki/CodingStandards.pdf).
