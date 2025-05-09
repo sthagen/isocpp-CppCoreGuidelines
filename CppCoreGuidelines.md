@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ Core Guidelines
 
-Oct 3, 2024
+May 8, 2025
 
 Editors:
 
@@ -7432,13 +7432,13 @@ We want to eliminate two particular classes of errors:
 * **implicit virtual**: the programmer intended the function to be implicitly virtual and it is (but readers of the code can't tell); or the programmer intended the function to be implicitly virtual but it isn't (e.g., because of a subtle parameter list mismatch); or the programmer did not intend the function to be virtual but it is (because it happens to have the same signature as a virtual in the base class)
 * **implicit override**: the programmer intended the function to be implicitly an overrider and it is (but readers of the code can't tell); or the programmer intended the function to be implicitly an overrider but it isn't (e.g., because of a subtle parameter list mismatch); or the programmer did not intend the function to be an overrider but it is (because it happens to have the same signature as a virtual in the base class -- note this problem arises whether or not the function is explicitly declared virtual, because the programmer might have intended to create either a new virtual function or a new non-virtual function)
 
-Note: On a class defined as `final`, it doesn't matter whether you put `override` or `final` on an individual virtual function.
+Note: On a class defined as `final`, each individual virtual function should use either `override` or `final`; there is no semantic difference in this case.
 
 Note: Use `final` on functions sparingly. It does not necessarily lead to optimization, and it precludes further overriding.
 
 ##### Enforcement
 
-* Compare virtual function names in base and derived classes and flag uses of the same name that does not override.
+* Compare virtual function names in base and derived classes and flag uses of the same name that do not override.
 * Flag overrides with neither `override` nor `final`.
 * Flag function declarations that use more than one of `virtual`, `override`, and `final`.
 
@@ -7772,6 +7772,8 @@ This kind of "vector" isn't meant to be used as a base class at all.
 * Flag a class where all member functions are virtual and have implementations.
 
 ### <a name="Rh-protected"></a>C.133: Avoid `protected` data
+
+**Alternative formulation**: Make member data `public` or (preferably) `private`.
 
 ##### Reason
 
@@ -9018,7 +9020,7 @@ If you wanted to see the bytes of an `int`, use a (named) cast:
     void if_you_must_pun(int& x)
     {
         auto p = reinterpret_cast<std::byte*>(&x);
-        cout << p[0] << '\n';     // OK; better
+        cout << to_integer<unsigned>(p[0]) << '\n'; // OK; better
         // ...
     }
 
@@ -20560,7 +20562,7 @@ Non-rule summary:
 * [NR.4: Don't insist on placing each class definition in its own source file](#Rnr-lots-of-files)
 * [NR.5: Don't use two-phase initialization](#Rnr-two-phase-init)
 * [NR.6: Don't place all cleanup actions at the end of a function and `goto exit`](#Rnr-goto-exit)
-* [NR.7: Don't make all data members `protected`](#Rnr-protected-data)
+* [NR.7: Don't make data members `protected`](#Rnr-protected-data)
 * ???
 
 ### <a name="Rnr-top"></a>NR.1: Don't insist that all declarations should be at the top of a function
@@ -20900,7 +20902,7 @@ and spot the bug.
 * Use exceptions and [RAII](#Re-raii)
 * for non-RAII resources, use [`finally`](#Re-finally).
 
-### <a name="Rnr-protected-data"></a>NR.7: Don't make all data members `protected`
+### <a name="Rnr-protected-data"></a>NR.7: Don't make data members `protected`
 
 ##### Reason
 
@@ -20914,7 +20916,7 @@ and spot the bug.
 
 ##### Alternative
 
-* [Make member data `public` or (preferably) `private`](#Rh-protected)
+* [Avoid `protected` data](#Rh-protected)
 
 
 # <a name="S-references"></a>RF: References
