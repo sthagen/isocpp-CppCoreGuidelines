@@ -767,7 +767,8 @@ We can of course pass the number of elements along with the pointer:
 
     void g2(int n)
     {
-        f2(new int[n], m);  // bad: a wrong number of elements can be passed to f()
+        // bad: the wrong number of elements can be passed to f2()
+        f2(new int[n], n);
     }
 
 Passing the number of elements as an argument is better (and far more common) than just passing the pointer and relying on some (unstated) convention for knowing or discovering the number of elements. However (as shown), a simple typo can introduce a serious error. The connection between the two arguments of `f2()` is conventional, rather than explicit.
@@ -5799,7 +5800,7 @@ Using default member initializers lets the compiler generate the function for yo
 
 ##### Enforcement
 
-(Simple) A default constructor should do more than just initialize data members with constants.
+(Simple) Flag if a default constructor's explicit member initializer is a constant, and recommend that the constant should be written as a data member initializer instead.
 
 ### <a name="rc-explicit"></a>C.46: By default, declare single-argument constructors explicit
 
@@ -9032,7 +9033,9 @@ but at least we can see that something tricky is going on.)
 Unfortunately, `union`s are commonly used for type punning.
 We don't consider "sometimes, it works as expected" a conclusive argument.
 
-C++17 introduced a distinct type `std::byte` to facilitate operations on raw object representation.  Use that type instead of `unsigned char` or `char` for these operations.
+Modern C++ introduced `std::byte` (C++17) and `std::bit_cast` (C++20) to facilitate operations on raw object representations.
+Use `reinterpret_cast` along with `std::byte` instead of `unsigned char` or `char` for these operations.
+
 
 ##### Enforcement
 
@@ -18461,7 +18464,7 @@ This is a simplified version of `std::copy` (ignoring the possibility of non-con
     template<class Iter>
     Out copy(Iter first, Iter last, Iter out)
     {
-        using tag_type = typename copy_trait<std::iter_value_t<Iter>>;
+        using tag_type = typename copy_trait<std::iter_value_t<Iter>>::tag;
         return copy_helper(first, last, out, tag_type{})
     }
 
