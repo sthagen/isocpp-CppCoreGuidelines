@@ -1,6 +1,6 @@
 # <a name="main"></a>C++ Core Guidelines
 
-Jul 8, 2025
+Jun 14, 2026
 
 Editors:
 
@@ -4851,7 +4851,7 @@ This can also come up with concurrency. Ensure that an async operation that acce
     class X {
     public:
         X()
-            : a{std::make_unique<int>(12)} 
+            : a{std::make_unique<int>(12)}
         {
             b = std::make_unique<std::jthread>(
                 [this]{
