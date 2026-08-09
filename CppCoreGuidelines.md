@@ -5987,7 +5987,7 @@ How would a maintainer know whether `j` was deliberately uninitialized (probably
     class X2 {
         int i {666};
         string s {"qqq"};
-        int j {0};
+        int j {numeric_limits<int>::min()};
     public:
         X2() = default;        // all members are initialized to their defaults
         X2(int ii) :i{ii} {}   // s and j initialized to their defaults
@@ -6001,7 +6001,7 @@ How would a maintainer know whether `j` was deliberately uninitialized (probably
         string s;
         int j;
     public:
-        X3(int ii = 666, const string& ss = "qqq", int jj = 0)
+        X3(int ii = 666, const string& ss = "qqq", int jj = numeric_limits<int>::min())
             :i{ii}, s{ss}, j{jj} { }   // all members are initialized to their defaults
         // ...
     };
@@ -12174,7 +12174,7 @@ The named casts are:
     class B { /* ... */ };
     class D { /* ... */ };
 
-    template<typename D> D* upcast(B* pb)
+    D* downcast(B* pb)
     {
         D* pd0 = pb;                        // error: no implicit conversion from B* to D*
         D* pd1 = (D*)pb;                    // legal, but what is done?
@@ -12615,6 +12615,10 @@ Slicing -- that is, copying only part of an object using assignment or initializ
 the object was meant to be considered as a whole.
 In the rare cases where the slicing was deliberate the code can be surprising.
 
+##### Note
+
+It is not possible to copy part of an empty object, so this definition of slicing deliberately does not include empty objects (having no nonstatic data members), such as empty types used for tag dispatching.
+
 ##### Example
 
     class Shape { /* ... */ };
@@ -12654,7 +12658,7 @@ For example:
 
 ##### Enforcement
 
-Warn against slicing.
+Warn against slicing if the base type has any nonstatic data members (possibly via transitive bases) .
 
 ### <a name="res-construct"></a>ES.64: Use the `T{e}`notation for construction
 
@@ -20534,6 +20538,7 @@ the choice between `'\n'` and `endl` is almost completely aesthetic.
 
 `<regex>` is the standard C++ regular expression library.
 It supports a variety of regular expression pattern conventions.
+For performance-critical work consider a third-party regular expression library.
 
 ## <a name="ss-chrono"></a>SL.chrono: Time
 
